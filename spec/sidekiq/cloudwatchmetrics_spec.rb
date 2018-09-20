@@ -8,7 +8,7 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
     # the same Sidekiq::DEFAULTS[:lifecycle_events]. So we have to manually clear it.
     before { Sidekiq.options[:lifecycle_events].each_value(&:clear) }
 
-    context "in a sidekiq server" do
+    context "in a Sidekiq server" do
       before { allow(Sidekiq).to receive(:server?).and_return(true) }
 
       it "creates a metrics publisher and installs hooks" do
@@ -41,12 +41,13 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
 
   describe "Publisher" do
     let(:client) { instance_double(Aws::CloudWatch::Client) }
+    let(:dimensions) { [{name: 'Environment', value: 'Production'}] }
     before { allow(client).to receive(:put_metric_data) }
 
-    subject(:publisher) { Sidekiq::CloudWatchMetrics::Publisher.new(client: client) }
+    subject(:publisher) { Sidekiq::CloudWatchMetrics::Publisher.new(client: client, dimensions: dimensions) }
 
     describe "#publish" do
-      it "publishes sidekiq metrics to cloudwatch" do
+      it "publishes sidekiq metrics to CloudWatch" do
         Timecop.freeze(now = Time.now) do
           stats = instance_double(Sidekiq::Stats,
             processed: 123,
@@ -78,105 +79,116 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
                 timestamp: now,
                 value: stats.processed,
                 unit: "Count",
+                dimensions: dimensions,
               },
               {
                 metric_name: "FailedJobs",
                 timestamp: now,
                 value: stats.failed,
                 unit: "Count",
+                dimensions: dimensions,
               },
               {
                 metric_name: "EnqueuedJobs",
                 timestamp: now,
                 value: stats.enqueued,
                 unit: "Count",
+                dimensions: dimensions,
               },
               {
                 metric_name: "ScheduledJobs",
                 timestamp: now,
                 value: stats.scheduled_size,
                 unit: "Count",
+                dimensions: dimensions,
               },
               {
                 metric_name: "RetryJobs",
                 timestamp: now,
                 value: stats.retry_size,
                 unit: "Count",
+                dimensions: dimensions,
               },
               {
                 metric_name: "DeadJobs",
                 timestamp: now,
                 value: stats.dead_size,
                 unit: "Count",
+                dimensions: dimensions,
               },
               {
                 metric_name: "Workers",
                 timestamp: now,
                 value: stats.workers_size,
                 unit: "Count",
+                dimensions: dimensions,
               },
               {
                 metric_name: "Processes",
                 timestamp: now,
                 value: stats.processes_size,
                 unit: "Count",
+                dimensions: dimensions,
               },
               {
                 metric_name: "Capacity",
                 timestamp: now,
                 value: 30,
                 unit: "Count",
+                dimensions: dimensions,
               },
               {
                 metric_name: "Utilization",
                 timestamp: now,
                 value: 30.0,
                 unit: "Percent",
+                dimensions: dimensions,
               },
               {
                 metric_name: "DefaultQueueLatency",
                 timestamp: now,
                 value: stats.default_queue_latency,
                 unit: "Seconds",
+                dimensions: dimensions,
               },
               {
                 metric_name: "QueueSize",
-                dimensions: [{name: "QueueName", value: "foo"}],
+                dimensions: [{name: "QueueName", value: "foo"}] + dimensions,
                 timestamp: now,
                 value: stats.queues["foo"],
                 unit: "Count",
               },
               {
                 metric_name: "QueueLatency",
-                dimensions: [{name: "QueueName", value: "foo"}],
+                dimensions: [{name: "QueueName", value: "foo"}] + dimensions,
                 timestamp: now,
                 value: 1.23,
                 unit: "Seconds",
               },
               {
                 metric_name: "QueueSize",
-                dimensions: [{name: "QueueName", value: "bar"}],
+                dimensions: [{name: "QueueName", value: "bar"}] + dimensions,
                 timestamp: now,
                 value: stats.queues["bar"],
                 unit: "Count",
               },
               {
                 metric_name: "QueueLatency",
-                dimensions: [{name: "QueueName", value: "bar"}],
+                dimensions: [{name: "QueueName", value: "bar"}] + dimensions,
                 timestamp: now,
                 value: 1.23,
                 unit: "Seconds",
               },
               {
                 metric_name: "QueueSize",
-                dimensions: [{name: "QueueName", value: "baz"}],
+                dimensions: [{name: "QueueName", value: "baz"}] + dimensions,
                 timestamp: now,
                 value: stats.queues["baz"],
                 unit: "Count",
               },
               {
                 metric_name: "QueueLatency",
-                dimensions: [{name: "QueueName", value: "baz"}],
+                dimensions: [{name: "QueueName", value: "baz"}] + dimensions,
                 timestamp: now,
                 value: 1.23,
                 unit: "Seconds",
@@ -186,7 +198,7 @@ RSpec.describe Sidekiq::CloudWatchMetrics do
         end
       end
 
-      it "publishes sidekiq metrics to cloudwatch for lots of queues in batches of 20" do
+      it "publishes sidekiq metrics to CloudWatch for lots of queues in batches of 20" do
         Timecop.freeze(now = Time.now) do
           stats = instance_double(Sidekiq::Stats,
             processed: 123,

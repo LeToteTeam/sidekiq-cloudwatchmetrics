@@ -36,9 +36,10 @@ module Sidekiq::CloudWatchMetrics
   class Publisher
     include Sidekiq::Util
 
-    def initialize(client: Aws::CloudWatch::Client.new, interval: 60)
+    def initialize(client: Aws::CloudWatch::Client.new, interval: 60, dimensions: [])
       @client = client
       @interval = interval
+      @dimensions = dimensions
     end
 
     def start
@@ -84,73 +85,84 @@ module Sidekiq::CloudWatchMetrics
           timestamp: now,
           value: stats.processed,
           unit: "Count",
+          dimensions: @dimensions,
         },
         {
           metric_name: "FailedJobs",
           timestamp: now,
           value: stats.failed,
           unit: "Count",
+          dimensions: @dimensions,
         },
         {
           metric_name: "EnqueuedJobs",
           timestamp: now,
           value: stats.enqueued,
           unit: "Count",
+          dimensions: @dimensions,
         },
         {
           metric_name: "ScheduledJobs",
           timestamp: now,
           value: stats.scheduled_size,
           unit: "Count",
+          dimensions: @dimensions,
         },
         {
           metric_name: "RetryJobs",
           timestamp: now,
           value: stats.retry_size,
           unit: "Count",
+          dimensions: @dimensions,
         },
         {
           metric_name: "DeadJobs",
           timestamp: now,
           value: stats.dead_size,
           unit: "Count",
+          dimensions: @dimensions,
         },
         {
           metric_name: "Workers",
           timestamp: now,
           value: stats.workers_size,
           unit: "Count",
+          dimensions: @dimensions,
         },
         {
           metric_name: "Processes",
           timestamp: now,
           value: stats.processes_size,
           unit: "Count",
+          dimensions: @dimensions,
         },
         {
           metric_name: "Capacity",
           timestamp: now,
           value: capacity,
           unit: "Count",
+          dimensions: @dimensions,
         },
         {
           metric_name: "Utilization",
           timestamp: now,
           value: utilization * 100.0,
           unit: "Percent",
+          dimensions: @dimensions,
         },
         {
           metric_name: "DefaultQueueLatency",
           timestamp: now,
           value: stats.default_queue_latency,
           unit: "Seconds",
+          dimensions: @dimensions,
         },
       ]
 
       queues.map do |(queue_name, queue_size)|
         metrics << {
           metric_name: "QueueSize",
-          dimensions: [{name: "QueueName", value: queue_name}],
+          dimensions: [{name: "QueueName", value: queue_name}] + @dimensions,
           timestamp: now,
           value: queue_size,
           unit: "Count",
@@ -160,7 +172,7 @@ module Sidekiq::CloudWatchMetrics
 
         metrics << {
           metric_name: "QueueLatency",
-          dimensions: [{name: "QueueName", value: queue_name}],
+          dimensions: [{name: "QueueName", value: queue_name}] + @dimensions,
           timestamp: now,
           value: queue_latency,
           unit: "Seconds",
