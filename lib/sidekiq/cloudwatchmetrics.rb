@@ -4,7 +4,7 @@ require "sidekiq"
 require "sidekiq/api"
 require "sidekiq/util"
 
-require "aws-sdk-cloudwatch"
+require "aws-sdk"
 
 module Sidekiq::CloudWatchMetrics
   def self.enable!(**kwargs)
