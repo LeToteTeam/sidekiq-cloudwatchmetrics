@@ -36,10 +36,9 @@ module Sidekiq::CloudWatchMetrics
   class Publisher
     include Sidekiq::Util
 
-    INTERVAL = 60 # seconds
-
-    def initialize(client: Aws::CloudWatch::Client.new)
+    def initialize(client: Aws::CloudWatch::Client.new, interval: 60)
       @client = client
+      @interval = interval
     end
 
     def start
@@ -56,7 +55,7 @@ module Sidekiq::CloudWatchMetrics
     def run
       logger.info { "Started Sidekiq CloudWatch Metrics Publisher" }
 
-      # Publish stats every INTERVAL seconds, sleeping as required between runs
+      # Publish stats every @interval seconds, sleeping as required between runs
       now = Time.now.to_f
       tick = now
       until @stop
@@ -64,7 +63,7 @@ module Sidekiq::CloudWatchMetrics
         publish
 
         now = Time.now.to_f
-        tick = [tick + INTERVAL, now].max
+        tick = [tick + @interval, now].max
         sleep(tick - now) if tick > now
       end
 
